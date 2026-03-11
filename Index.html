@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore PDF Tabelle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica', Arial, sans-serif;
+            background: var(--color-background);
+            color: var(--color-text);
+        }
+
+        @page {
+            size: A4 landscape;
+            margin: 0.3cm 1cm;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .page {
+                page-break-after: always;
+                width: 100%;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                padding: 0.5cm 0;
+            }
+
+            .page:last-child {
+                page-break-after: auto;
+            }
+
+            body {
+                background: white;
+            }
+        }
+
+        @media screen {
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: var(--space-20);
+            }
+
+            .controls {
+                background: var(--color-surface);
+                padding: var(--space-20);
+                border-radius: var(--radius-lg);
+                margin-bottom: var(--space-24);
+                border: 1px solid var(--color-border);
+                display: flex;
+                gap: var(--space-16);
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: var(--space-12) var(--space-24);
+                border-radius: var(--radius-base);
+                font-size: var(--font-size-base);
+                font-weight: 500;
+                cursor: pointer;
+                transition: all var(--duration-normal) var(--ease-standard);
+                border: none;
+                text-decoration: none;
+            }
+
+            .btn--primary {
+                background: var(--color-primary);
+                color: var(--color-btn-primary-text);
+            }
+
+            .btn--primary:hover {
+                background: var(--color-primary-hover);
+            }
+
+            .btn--secondary {
+                background: var(--color-secondary);
+                color: var(--color-text);
+            }
+
+            .btn--secondary:hover {
+                background: var(--color-secondary-hover);
+            }
+
+            .page {
+                background: white;
+                margin-bottom: var(--space-32);
+                padding: var(--space-24);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow-lg);
+                page-break-inside: avoid;
+            }
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #000;
+        }
+
+        .table-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        td {
+            border: 2px solid #000;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 10px 2px;
+            color: #000;
+            width: 6.66%;
+            height: 60px;
+        }
+
+        :root {
+            --color-background: rgba(252, 252, 249, 1);
+            --color-surface: rgba(255, 255, 253, 1);
+            --color-text: rgba(19, 52, 59, 1);
+            --color-primary: rgba(33, 128, 141, 1);
+            --color-primary-hover: rgba(29, 116, 128, 1);
+            --color-secondary: rgba(94, 82, 64, 0.12);
+            --color-secondary-hover: rgba(94, 82, 64, 0.2);
+            --color-border: rgba(94, 82, 64, 0.2);
+            --color-btn-primary-text: rgba(252, 252, 249, 1);
+            --space-12: 12px;
+            --space-16: 16px;
+            --space-20: 20px;
+            --space-24: 24px;
+            --space-32: 32px;
+            --radius-base: 8px;
+            --radius-lg: 12px;
+            --font-size-base: 14px;
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+            --duration-normal: 250ms;
+            --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-background: rgba(31, 33, 33, 1);
+                --color-surface: rgba(38, 40, 40, 1);
+                --color-text: rgba(245, 245, 245, 1);
+                --color-primary: rgba(50, 184, 198, 1);
+                --color-primary-hover: rgba(45, 166, 178, 1);
+                --color-secondary: rgba(119, 124, 124, 0.15);
+                --color-secondary-hover: rgba(119, 124, 124, 0.25);
+                --color-border: rgba(119, 124, 124, 0.3);
+                --color-btn-primary-text: rgba(19, 52, 59, 1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print container">
+        <div class="controls">
+            <button class="btn btn--primary" onclick="window.print()">🖨️ Stampa PDF</button>
+            <button class="btn btn--secondary" onclick="rigeneraPagine()">🔄 Rigenera Pagine</button>
+            <span style="margin-left: auto; font-size: var(--font-size-base);">
+                10 pagine generate
+            </span>
+        </div>
+    </div>
+
+    <div id="pages-container"></div>
+
+    <script>
+        const LETTERE = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'Z'];
+        const NUMERI = Array.from({length: 100}, (_, i) => i.toString());
+        const NUM_PAGINE = 10;
+
+        function randomChoice(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function randomSample(arr, n) {
+            const shuffled = [...arr].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, n);
+        }
+
+        function randomChoices(arr, k) {
+            return Array.from({length: k}, () => randomChoice(arr));
+        }
+
+        function shuffle(arr) {
+            const array = [...arr];
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function creaPagina() {
+            const nCerca = randomChoice([2, 3]);
+            const nLettereCerca = Math.round(nCerca * 0.33);
+            const nNumeriCerca = nCerca - nLettereCerca;
+
+            const cercaLettere = randomSample(LETTERE, nLettereCerca);
+            const cercaNumeri = randomSample(NUMERI, nNumeriCerca);
+            const cerca = [...cercaLettere, ...cercaNumeri];
+
+            const pageDiv = document.createElement('div');
+            pageDiv.className = 'page';
+
+            const title = document.createElement('div');
+            title.className = 'title';
+            title.textContent = `CERCA: ${cerca.join(' - ')}`;
+            pageDiv.appendChild(title);
+
+            const tableContainer = document.createElement('div');
+            tableContainer.className = 'table-container';
+
+            const table = document.createElement('table');
+
+            for (let riga = 0; riga < 10; riga++) {
+                const nCercaRiga = Math.floor(Math.random() * 3) + 3; // 3-5
+                let rigaData = randomChoices(cerca, nCercaRiga);
+
+                const altriLettere = LETTERE.filter(l => !cerca.includes(l));
+                const altriNumeri = NUMERI.filter(n => !cerca.includes(n));
+
+                const nRiempimento = 15 - nCercaRiga;
+                const nLettereRiempimento = Math.round(nRiempimento * 0.33);
+                const nNumeriRiempimento = nRiempimento - nLettereRiempimento;
+
+                const riempimento = [
+                    ...randomChoices(altriLettere, nLettereRiempimento),
+                    ...randomChoices(altriNumeri, nNumeriRiempimento)
+                ];
+
+                rigaData = [...rigaData, ...riempimento];
+                rigaData = shuffle(rigaData);
+
+                const tr = document.createElement('tr');
+                rigaData.forEach(val => {
+                    const td = document.createElement('td');
+                    td.textContent = val;
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            }
+
+            tableContainer.appendChild(table);
+            pageDiv.appendChild(tableContainer);
+
+            return pageDiv;
+        }
+
+        function generaPagine() {
+            const container = document.getElementById('pages-container');
+            container.innerHTML = '';
+
+            for (let i = 0; i < NUM_PAGINE; i++) {
+                container.appendChild(creaPagina());
+            }
+        }
+
+        function rigeneraPagine() {
+            generaPagine();
+        }
+
+        // Genera pagine al caricamento
+        generaPagine();
+
+        // Apri stampa automaticamente dopo un breve delay
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+
